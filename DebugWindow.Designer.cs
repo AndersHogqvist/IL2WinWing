@@ -28,7 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DebugWindow));
             debugTextBox = new TextBox();
+            toggleBtn = new Button();
+            closeBtn = new Button();
+            clearBtn = new Button();
             SuspendLayout();
             // 
             // debugTextBox
@@ -38,16 +42,50 @@
             debugTextBox.Multiline = true;
             debugTextBox.Name = "debugTextBox";
             debugTextBox.ScrollBars = ScrollBars.Vertical;
-            debugTextBox.Size = new Size(776, 426);
+            debugTextBox.Size = new Size(776, 397);
             debugTextBox.TabIndex = 0;
+            // 
+            // toggleBtn
+            // 
+            toggleBtn.Location = new Point(12, 415);
+            toggleBtn.Name = "toggleBtn";
+            toggleBtn.Size = new Size(75, 23);
+            toggleBtn.TabIndex = 1;
+            toggleBtn.Text = "Start";
+            toggleBtn.UseVisualStyleBackColor = true;
+            toggleBtn.Click += toggleBtn_Click;
+            // 
+            // closeBtn
+            // 
+            closeBtn.Location = new Point(713, 415);
+            closeBtn.Name = "closeBtn";
+            closeBtn.Size = new Size(75, 23);
+            closeBtn.TabIndex = 2;
+            closeBtn.Text = "Close";
+            closeBtn.UseVisualStyleBackColor = true;
+            closeBtn.Click += closeBtn_Click;
+            // 
+            // clearBtn
+            // 
+            clearBtn.Location = new Point(93, 415);
+            clearBtn.Name = "clearBtn";
+            clearBtn.Size = new Size(75, 23);
+            clearBtn.TabIndex = 3;
+            clearBtn.Text = "Clear";
+            clearBtn.UseVisualStyleBackColor = true;
+            clearBtn.Click += clearBtn_Click;
             // 
             // DebugWindow
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(clearBtn);
+            Controls.Add(closeBtn);
+            Controls.Add(toggleBtn);
             Controls.Add(debugTextBox);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "DebugWindow";
             Text = "IL2WinWing Debug";
             ResumeLayout(false);
@@ -57,5 +95,8 @@
         #endregion
 
         private TextBox debugTextBox;
+        private Button toggleBtn;
+        private Button closeBtn;
+        private Button clearBtn;
     }
 }

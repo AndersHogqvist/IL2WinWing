@@ -26,9 +26,27 @@ namespace IL2WinWing.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("4322")]
-        public int IL2Port {
+        public int IL2TelemetryPort {
             get {
-                return ((int)(this["IL2Port"]));
+                return ((int)(this["IL2TelemetryPort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4321")]
+        public int IL2MotionPort {
+            get {
+                return ((int)(this["IL2MotionPort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("16536")]
+        public int WWPort {
+            get {
+                return ((int)(this["WWPort"]));
             }
         }
     }

@@ -22,13 +22,16 @@ namespace IL2WinWing
 
     public class CustomAppContext : ApplicationContext
     {
-        private UdpClient client = new UdpClient(Properties.Settings.Default.IL2Port);
-        private IPEndPoint groupEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2Port);
+        private UdpClient telemetryClient = new UdpClient(Properties.Settings.Default.IL2TelemetryPort);
+        private UdpClient motionClient = new UdpClient(Properties.Settings.Default.IL2MotionPort);
+        private IPEndPoint teleEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2TelemetryPort);
+        private IPEndPoint motionEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2MotionPort);
 
         private readonly NotifyIcon trayIcon;
         private DebugWindow debugWindow;
         private bool run = true;
-        private bool debug = false;
+
+        private WWAPI wwAPI = new WWAPI();
 
         public CustomAppContext()
         {
@@ -42,40 +45,35 @@ namespace IL2WinWing
             trayIcon.Visible = true;
 
             new Task(IL2Listener).Start();
+
+            wwAPI.StartListen();
         }
 
         ~CustomAppContext()
         {
+            wwAPI.StopListen();
             run = false;
-        }
-
-        private void DebugWindow_FormClosing(object sender, EventArgs e)
-        {
-            debug = false;
-            debugWindow.ClearText();
         }
 
         private void ShowDebugWindow(object sender, EventArgs e)
         {
             debugWindow = new DebugWindow();
-            debugWindow.FormClosing += DebugWindow_FormClosing;
-
-            debug = true;
             debugWindow.Show();
-            try
-            {
-                string? debug = "";
-                byte[] data = DummyData.GetTelemetry(ref debug);
-                if (data != null)
-                {
-                    debugWindow.AddText(debug);
-                }
-                client.Send(data, data.Length, groupEP);
-            }
-            catch (SocketException ex)
-            {
-                Console.WriteLine(ex);
-            }
+
+            //try
+            //{
+            //    string? debug = "";
+            //    byte[] data = DummyData.GetTelemetry(ref debug);
+            //    if (data != null)
+            //    {
+            //        debugWindow.AddText(debug);
+            //    }
+            //    client.Send(data, data.Length, groupEP);
+            //}
+            //catch (SocketException ex)
+            //{
+            //    Console.WriteLine(ex);
+            //}
         }
 
         private void IL2Listener()
@@ -84,7 +82,14 @@ namespace IL2WinWing
             {
                 while (run)
                 {
-                    byte[] bytes = client.Receive(ref groupEP);
+                    byte[] bytes = telemetryClient.Receive(ref teleEP);
+
+                    if (bytes.Length > 0)
+                    {
+                        ParseIL2Message(bytes);
+                    }
+
+                    bytes = motionClient.Receive(ref motionEP);
 
                     if (bytes.Length > 0)
                     {
@@ -101,7 +106,7 @@ namespace IL2WinWing
             finally
             {
                 run = false;
-                client.Close();
+                telemetryClient.Close();
             }
         }
 
@@ -110,9 +115,9 @@ namespace IL2WinWing
             using (var ms = new MemoryStream(bytes))
             using (var reader = new BinaryReader(ms))
             {
-                var type = IL2Protocol.MessageTypeExtensions.ToMessageType(reader.ReadUInt32());
+                var type = reader.ReadUInt32();
 
-                if (type == IL2Protocol.MessageType.TELEMETRY)
+                if (type == (UInt32)IL2Protocol.MessageType.TELEMETRY)
                 {
                     IL2Protocol.Telemetry telemetry = new IL2Protocol.Telemetry();
                     telemetry.size = reader.ReadUInt16();
@@ -121,6 +126,7 @@ namespace IL2WinWing
 
                     for (int ix = 0; ix < (int)telemetry.numOfIndicators; ix++)
                     {
+                        
                         IL2Protocol.SIndicator ind = new IL2Protocol.SIndicator();
                         ind.id = IL2Protocol.IndicatorIDExtensions.ToIndicatorID(reader.ReadUInt16());
                         ind.numOfValues = reader.ReadByte();
@@ -146,8 +152,8 @@ namespace IL2WinWing
                                     var ev = new IL2Protocol.SEventSetFocus();
                                     ev.id = id;
                                     ev.size = size;
-                                    var data = reader.ReadBytes(size);
-                                    ev.data = Encoding.UTF8.GetString(data);
+                                    var data = reader.ReadBytes((int)size);
+                                    ev.data = Encoding.ASCII.GetString(data);
                                     telemetry.events.Add(ev);
                                     break;
                                 }
@@ -272,7 +278,7 @@ namespace IL2WinWing
                                     var ev = new IL2Protocol.SEventServerAddress();
                                     ev.id = id;
                                     ev.size = size;
-                                    var data = reader.ReadBytes(size);
+                                    var data = reader.ReadBytes((int)size);
                                     ev.data = Encoding.UTF8.GetString(data);
                                     telemetry.events.Add(ev);
                                     break;
@@ -282,8 +288,8 @@ namespace IL2WinWing
                                     var ev = new IL2Protocol.SEventServerTitle();
                                     ev.id = id;
                                     ev.size = size;
-                                    var data = reader.ReadBytes(size);
-                                    ev.data = Encoding.UTF8.GetString(data);
+                                    var data = reader.ReadBytes((int)size);
+                                    ev.data = Encoding.ASCII.GetString(data);
                                     telemetry.events.Add(ev);
                                     break;
                                 }
@@ -292,8 +298,8 @@ namespace IL2WinWing
                                     var ev = new IL2Protocol.SEventSRSAddress();
                                     ev.id = id;
                                     ev.size = size;
-                                    var data = reader.ReadBytes(size);
-                                    ev.data = Encoding.UTF8.GetString(data);
+                                    var data = reader.ReadBytes((int)size);
+                                    ev.data = Encoding.ASCII.GetString(data);
                                     telemetry.events.Add(ev);
                                     break;
                                 }
@@ -324,9 +330,47 @@ namespace IL2WinWing
                         _ = reader.ReadBytes(2); // padding
                     }
 
-                    if (debug)
+
+                    if (debugWindow != null && debugWindow.printText)
                     {
-                        debugWindow.AddText(telemetry.Print());
+                        debugWindow.AddText(telemetry.ToString());
+                    }
+
+                    var aoa = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.AOA);
+                    var eas = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.EAS);
+
+                    if (aoa != null && eas != null)
+                    {
+                        WWAPI.WWTelemetryMsg wwTelemetry = new WWAPI.WWTelemetryMsg();
+                        wwTelemetry.args.angleOfAttack = aoa.values[0] * (180.0F / float.Pi);
+                        wwTelemetry.args.trueAirSpeed = eas.values[0] * 9.0F;
+                        if (!wwAPI.Send(WWAPI.WWMessage.UPDATE, wwTelemetry) && debugWindow != null)
+                        {
+                            debugWindow.AddText("Failed to send WW telemetry");
+                        }
+                    }
+                    else
+                    {
+                        wwAPI.Send(WWAPI.WWMessage.STOP);
+                    }
+                }
+                else if (type == (uint)IL2Protocol.MessageType.MOTION_ID)
+                {
+                    IL2Protocol.Motion motion= new IL2Protocol.Motion();
+                    motion.tick = reader.ReadUInt32();
+                    motion.yaw = reader.ReadSingle();
+                    motion.pitch = reader.ReadSingle();
+                    motion.roll = reader.ReadSingle();
+                    motion.spin[0] = reader.ReadSingle();
+                    motion.spin[1] = reader.ReadSingle();
+                    motion.spin[2] = reader.ReadSingle();
+                    motion.acc[0] = reader.ReadSingle();
+                    motion.acc[1] = reader.ReadSingle();
+                    motion.acc[2] = reader.ReadSingle();
+
+                    if (debugWindow != null && debugWindow.printText)
+                    {
+                        debugWindow.AddText(motion.ToString());
                     }
                 }
             }
@@ -334,6 +378,7 @@ namespace IL2WinWing
 
         private void Exit(object sender, EventArgs e)
         {
+            wwAPI.StopListen();
             run = false;
             trayIcon.Visible = false;
             Application.Exit();

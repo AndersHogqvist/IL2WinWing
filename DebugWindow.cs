@@ -13,6 +13,7 @@ namespace IL2WinWing
 {
     public partial class DebugWindow : Form
     {
+        public bool printText { get; private set; } = false;
         public DebugWindow()
         {
             InitializeComponent();
@@ -42,6 +43,23 @@ namespace IL2WinWing
                 return;
             }
 
+            debugTextBox.Clear();
+        }
+
+        private void toggleBtn_Click(object sender, EventArgs e)
+        {
+            printText = !printText;
+            toggleBtn.Text = printText ? "Stop" : "Start";
+        }
+
+        private void closeBtn_Click(object sender, EventArgs e)
+        {
+            printText = false;
+            this.Close();
+        }
+
+        private void clearBtn_Click(object sender, EventArgs e)
+        {
             debugTextBox.Clear();
         }
     }

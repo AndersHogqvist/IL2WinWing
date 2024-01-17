@@ -2,8 +2,14 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="IL2WinWing.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="IL2Port" Type="System.Int32" Scope="Application">
+    <Setting Name="IL2TelemetryPort" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">4322</Value>
+    </Setting>
+    <Setting Name="IL2MotionPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">4321</Value>
+    </Setting>
+    <Setting Name="WWPort" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">16536</Value>
     </Setting>
   </Settings>
 </SettingsFile>
