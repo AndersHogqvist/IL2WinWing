@@ -98,20 +98,20 @@ namespace IL2WinWing
                         }
                     }
 
-                    bytes = motionClient.Receive(ref motionEP);
+                    //bytes = motionClient.Receive(ref motionEP);
 
-                    if (bytes.Length > 0)
-                    {
-                        if (!wwAPI.wwInit && !waitingForWWInit)
-                        {
-                            waitingForWWInit = true;
-                            wwAPI.Send(WWAPI.WWMessage.START);
-                        }
-                        else
-                        {
-                            ParseIL2Message(bytes);
-                        }
-                    }
+                    //if (bytes.Length > 0)
+                    //{
+                    //    if (!wwAPI.wwInit && !waitingForWWInit)
+                    //    {
+                    //        waitingForWWInit = true;
+                    //        wwAPI.Send(WWAPI.WWMessage.START);
+                    //    }
+                    //    else
+                    //    {
+                    //        ParseIL2Message(bytes);
+                    //    }
+                    //}
 
                     Thread.Sleep(25);
                 }
@@ -389,10 +389,10 @@ namespace IL2WinWing
 
                 if (telemetry.numOfIndicators == 0 && wwAPI.wwInit)
                 {
-                    debugWindow?.AddText("No indicators");
-                    if (!wwAPI.Send(WWAPI.WWMessage.STOP))
+                    debugWindow?.AddText("No indicators, send empty telemetry to WW");
+                    if (!wwAPI.Send(WWAPI.WWMessage.UPDATE, new WWAPI.WWTelemetryMsg()))
                     {
-                        debugWindow?.AddText("Failed to send WW stop");
+                        debugWindow?.AddText("Failed to send empty ww");
                     }
                     return;
                 }
@@ -404,6 +404,9 @@ namespace IL2WinWing
                 var gear = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.LGEARS_STATE);
 
                 var gunFire = telemetry.events.Find(x => x.id == IL2Protocol.EventID.GUN_FIRE);
+                var bombDrop = telemetry.events.Find(x => x.id == IL2Protocol.EventID.DROP_BOMB);
+                var rocketLaunch = telemetry.events.Find(x => x.id == IL2Protocol.EventID.ROCKET_LAUNCH);
+                var hit = telemetry.events.Find(x => x.id == IL2Protocol.EventID.HIT);
 
                 var agl_ft = agl != null ? agl.values[0] * 3.3F : 0.0F;
                 float ft_above_ground = (float)Math.Floor((double)agl_ft / 1000);
@@ -414,6 +417,15 @@ namespace IL2WinWing
                 wwTelemetry.args.trueAirSpeed = eas != null ? eas.values[0] + 0.02F * ft_above_ground : wwTelemetry.args.trueAirSpeed;
                 wwTelemetry.args.gearValue = gear != null ? gear.values[0] : wwTelemetry.args.gearValue;
                 if (gunFire != null)
+                {
+                    gunShells -= 1;
+                    if (gunShells < 0)
+                    {
+                        gunShells = 1000;
+                    }
+                    wwTelemetry.args.cannonShellsCount = gunShells;
+                }
+                if (bombDrop != null || rocketLaunch != null || hit != null)
                 {
                     gunShells -= 1;
                     if (gunShells < 0)
