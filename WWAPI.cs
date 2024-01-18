@@ -12,7 +12,7 @@ namespace IL2WinWing
 {
     public class WWMessageEventArgs : EventArgs
     {
-        public JsonObject msg { get; set; }
+        public string msg { get; set; }
     }
     internal class WWAPI
     {
@@ -20,7 +20,6 @@ namespace IL2WinWing
         
         private IPEndPoint wwEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.WWPort);
         private bool listen = false;
-        private bool wwInit = false;
 
         private const string NET_READY = "{\"func\": \"net\", \"msg\": \"ready\"}";
         private const string MSN_READY = "{\"func\": \"mission\", \"msg\": \"ready\"}";
@@ -28,10 +27,16 @@ namespace IL2WinWing
         private const string MOD       = "{\"func\": \"mod\", \"msg\": \"TF-51D\"}";
         private const string MSN_STOP  = "{\"func\": \"mission\", \"msg\": \"stop\"}";
 
+        public bool wwInit { get; set; } = false;
+
         public class Args
         {
             public float angleOfAttack { get; set; }
             public float trueAirSpeed { get; set; }
+            public float gearValue { get; set; }
+            public int cannonShellsCount { get; set; } = 1000;
+            public float speedbrakesValue { get; set; }
+            public float verticalVelocity { get; set; }
             public List<object> payloadStations { get; set; } = new List<object>();
         }
 
@@ -39,6 +44,11 @@ namespace IL2WinWing
         {
             public string func { get; } = "addCommon";
             public Args args { get; set; } = new Args();
+
+            public override string ToString()
+            {
+                return JsonSerializer.Serialize(this);
+            }
         }
 
         public WWAPI()
@@ -54,14 +64,10 @@ namespace IL2WinWing
         public void StartListen()
         {
             listen = true;
-            if (!wwInit)
-            {
-                Send(WWMessage.START);
-            }
-            Task.Run(() => Receiver());
+            new Task(Receiver).Start();
         }
 
-        public void StopListen()
+        public void TearDown()
         {
             Send(WWMessage.STOP);
             listen = false;
@@ -87,9 +93,8 @@ namespace IL2WinWing
                 }
                 catch (Exception)
                 {
-                    // do nothing
+                    return false;
                 }
-                Thread.Sleep(30);
                 bytes = Encoding.ASCII.GetBytes(NET_READY);
                 try
                 {
@@ -99,7 +104,6 @@ namespace IL2WinWing
                 {
                     return false;
                 }
-                Thread.Sleep(30);
                 bytes = Encoding.ASCII.GetBytes(MSN_READY);
                 try
                 {
@@ -109,7 +113,6 @@ namespace IL2WinWing
                 {
                     return false;
                 }
-                Thread.Sleep(30);
                 bytes = Encoding.ASCII.GetBytes(MSN_START);
                 try
                 {
@@ -119,7 +122,6 @@ namespace IL2WinWing
                 {
                     return false;
                 }
-                Thread.Sleep(30);
                 bytes = Encoding.ASCII.GetBytes(MOD);
                 try
                 {
@@ -129,9 +131,6 @@ namespace IL2WinWing
                 {
                     return false;
                 }
-
-                Thread.Sleep(2000);
-                wwInit = true;
             }
             else if (msg == WWMessage.UPDATE && telemetry != null && wwInit)
             {
@@ -139,23 +138,24 @@ namespace IL2WinWing
                 byte[] bytes = Encoding.ASCII.GetBytes(json);
                 try
                 {
-                    wwClient.Send(bytes, bytes.Length, wwEP);
+                    wwClient.SendAsync(bytes, bytes.Length, wwEP);
                 }
                 catch (Exception)
                 {
                     return false;
                 }
             }
-            else if (msg == WWMessage.STOP)
+            else if (msg == WWMessage.STOP && wwInit)
             {
                 byte[] bytes = Encoding.ASCII.GetBytes(MSN_STOP);
                 try
                 {
-                    wwClient.Send(bytes, bytes.Length, wwEP);
+                    wwClient.SendAsync(bytes, bytes.Length, wwEP);
+                    wwInit = false;
                 }
                 catch (Exception)
                 {
-                    // do nothing
+                    return false;
                 }
             }
             return true;
@@ -171,10 +171,9 @@ namespace IL2WinWing
 
                     if (data.Length > 0)
                     {
-                        string json = Encoding.ASCII.GetString(data);
-                        JsonObject obj = JsonNode.Parse(json) as JsonObject;
                         WWMessageEventArgs msg = new WWMessageEventArgs();
-                        msg.msg = obj;
+                        msg.msg = Encoding.ASCII.GetString(data);
+                        WWMessageReceived(this, msg);
                     }
                 }
                 catch (Exception)
@@ -182,7 +181,7 @@ namespace IL2WinWing
                     listen = false;
                 }
 
-                Thread.Sleep(30);
+                Thread.Sleep(25);
             }
         }
 
