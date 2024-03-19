@@ -26,7 +26,7 @@ namespace IL2WinWing
         private UdpClient telemetryClient = new UdpClient(Properties.Settings.Default.IL2TelemetryPort);
         private UdpClient motionClient = new UdpClient(Properties.Settings.Default.IL2MotionPort);
         private IPEndPoint teleEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2TelemetryPort);
-        private IPEndPoint motionEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2MotionPort);
+        //private IPEndPoint motionEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2MotionPort);
 
         private IL2Protocol.Motion motion = new IL2Protocol.Motion();
         private int gunShells = 1000;
@@ -67,6 +67,10 @@ namespace IL2WinWing
             {
                 wwAPI.wwInit = true;
                 waitingForWWInit = false;
+            }
+            else if (e.msg.Contains("clearOutput"))
+            {
+                wwAPI.wwInit = false;
             }
         }
 
@@ -145,7 +149,7 @@ namespace IL2WinWing
                     numOfIndicators = reader.ReadByte()
                 };
 
-                for (int ix = 0; ix < (int)telemetry.numOfIndicators; ix++)
+                for (int ix = 0; ix < (int)telemetry.numOfIndicators && reader.BaseStream.Position != reader.BaseStream.Length; ix++)
                 {
 
                     IL2Protocol.SIndicator ind = new IL2Protocol.SIndicator
@@ -164,7 +168,7 @@ namespace IL2WinWing
 
                 telemetry.numOfEvents = reader.ReadByte();
 
-                for (int ix = 0; ix < (int)telemetry.numOfEvents; ix++)
+                for (int ix = 0; ix < (int)telemetry.numOfEvents && reader.BaseStream.Position != reader.BaseStream.Length; ix++)
                 {
                     var id = IL2Protocol.EventIDExtensions.ToEventID(reader.ReadUInt16());
                     var size = reader.ReadByte();
@@ -178,7 +182,14 @@ namespace IL2WinWing
                                     id = id,
                                     size = size
                                 };
-                                ev.data = reader.ReadString();
+                                try
+                                {
+                                    ev.data = reader.ReadString();
+                                }
+                                catch (Exception)
+                                {
+                                    ev.data = "";
+                                }
                                 telemetry.events.Add(ev);
                                 break;
                             }
@@ -382,18 +393,19 @@ namespace IL2WinWing
                 }
 
 
-                if (debugWindow != null && debugWindow.printText)
-                {
-                    debugWindow.AddText(telemetry.ToString());
-                }
+                //if (debugWindow != null && debugWindow.printText)
+                //{
+                //    debugWindow.AddText(telemetry.ToString());
+                //}
 
-                if (telemetry.numOfIndicators == 0 && wwAPI.wwInit)
+                if (telemetry.size == 12 && wwAPI.wwInit)
                 {
-                    debugWindow?.AddText("No indicators, send empty telemetry to WW");
-                    if (!wwAPI.Send(WWAPI.WWMessage.UPDATE, new WWAPI.WWTelemetryMsg()))
+                    debugWindow?.AddText("Empty telemetry, stop WW API");
+                    if (!wwAPI.Send(WWAPI.WWMessage.STOP))
                     {
-                        debugWindow?.AddText("Failed to send empty ww");
+                        debugWindow?.AddText("Failed to send stop ww");
                     }
+                    wwAPI.wwInit = false;
                     return;
                 }
 
