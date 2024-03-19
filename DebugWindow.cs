@@ -21,6 +21,11 @@ namespace IL2WinWing
 
         public void AddText(string text)
         {
+            if (!printText)
+            {
+                return;
+            }
+
             if (InvokeRequired)
             {
                 Invoke(new Action<string>(AddText), text);
@@ -31,7 +36,7 @@ namespace IL2WinWing
 
             foreach (string line in lines)
             {
-                debugTextBox.AppendText(line + Environment.NewLine);
+                debugTextBox?.AppendText(line + Environment.NewLine);
             }
         }
 
@@ -61,6 +66,11 @@ namespace IL2WinWing
         private void clearBtn_Click(object sender, EventArgs e)
         {
             debugTextBox.Clear();
+        }
+
+        private void DebugWindow_Closing(object sender, FormClosingEventArgs e)
+        {
+            printText = false;
         }
     }
 }
