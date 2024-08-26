@@ -32,11 +32,20 @@ namespace IL2WinWing
         public class Args
         {
             public float angleOfAttack { get; set; }
+            public float rateOfAngleOfAttack { get; set; }
             public float trueAirSpeed { get; set; }
             public float gearValue { get; set; }
+            public bool isGearDown { get; set; }
+            public bool isGearTouchGround { get; set; }
             public int cannonShellsCount { get; set; } = 1000;
+            public bool isFireCannonShells { get; set; } = false;
             public float speedbrakesValue { get; set; }
             public float verticalVelocity { get; set; }
+            public float accelerationX { get; set; }
+            public float accelerationY { get; set; }
+            public float accelerationZ { get; set; }
+            public bool hasPayload { get; set; } = false;
+            public bool hasNoPayload { get; set; } = true;
             public List<object> payloadStations { get; set; } = new List<object>();
         }
 
