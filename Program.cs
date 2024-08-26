@@ -30,6 +30,7 @@ namespace IL2WinWing
 
         private IL2Protocol.Motion motion = new IL2Protocol.Motion();
         private int gunShells = 1000;
+        private float lastAoA = 0.0F;
 
         private readonly NotifyIcon trayIcon;
         private DebugWindow? debugWindow;
@@ -411,23 +412,32 @@ namespace IL2WinWing
 
                 var aoa = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.AOA);
                 var eas = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.EAS);
-                var agl = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.AGL);
                 var spdBrk = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.AIR_BRAKES);
-                var gear = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.LGEARS_STATE);
+                var gearState = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.LGEARS_STATE);
+                var gearPress = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.LGEARS_PRESS);
+                var accl = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.ACCELERATION);
+
+                var shake = telemetry.indicators.Find(x => x.id == IL2Protocol.IndicatorID.COCKPIT_SHAKE);
 
                 var gunFire = telemetry.events.Find(x => x.id == IL2Protocol.EventID.GUN_FIRE);
                 var bombDrop = telemetry.events.Find(x => x.id == IL2Protocol.EventID.DROP_BOMB);
                 var rocketLaunch = telemetry.events.Find(x => x.id == IL2Protocol.EventID.ROCKET_LAUNCH);
                 var hit = telemetry.events.Find(x => x.id == IL2Protocol.EventID.HIT);
-
-                var agl_ft = agl != null ? agl.values[0] * 3.3F : 0.0F;
-                float ft_above_ground = (float)Math.Floor((double)agl_ft / 1000);
-
+                
                 WWAPI.WWTelemetryMsg wwTelemetry = new WWAPI.WWTelemetryMsg();
 
                 wwTelemetry.args.angleOfAttack = aoa != null ? aoa.values[0] * (180.0F / float.Pi) : wwTelemetry.args.angleOfAttack;
-                wwTelemetry.args.trueAirSpeed = eas != null ? eas.values[0] + 0.02F * ft_above_ground : wwTelemetry.args.trueAirSpeed;
-                wwTelemetry.args.gearValue = gear != null ? gear.values[0] : wwTelemetry.args.gearValue;
+
+                // Calculate the rate of change of AoA in degrees per second. We're reading the value every 25ms.
+                float deltaAoA = Math.Abs(wwTelemetry.args.angleOfAttack - lastAoA) / 0.025F;
+                lastAoA = wwTelemetry.args.angleOfAttack;
+                wwTelemetry.args.rateOfAngleOfAttack = deltaAoA;
+
+
+                wwTelemetry.args.trueAirSpeed = eas != null ? eas.values[0] : wwTelemetry.args.trueAirSpeed;
+                wwTelemetry.args.gearValue = gearState != null ? gearState.values[0] : wwTelemetry.args.gearValue;
+                wwTelemetry.args.isGearDown = gearState != null ? gearState.values[0] == 1.0F : wwTelemetry.args.isGearDown;
+                wwTelemetry.args.isGearTouchGround = gearPress != null ? gearPress.values[0] > 0.0F : wwTelemetry.args.isGearTouchGround;
                 if (gunFire != null)
                 {
                     gunShells -= 1;
@@ -436,6 +446,11 @@ namespace IL2WinWing
                         gunShells = 1000;
                     }
                     wwTelemetry.args.cannonShellsCount = gunShells;
+                    wwTelemetry.args.isFireCannonShells = true;
+                }
+                else
+                {
+                    wwTelemetry.args.isFireCannonShells = false;
                 }
                 if (bombDrop != null || rocketLaunch != null || hit != null)
                 {
@@ -447,7 +462,14 @@ namespace IL2WinWing
                     wwTelemetry.args.cannonShellsCount = gunShells;
                 }
                 wwTelemetry.args.speedbrakesValue = spdBrk != null ? spdBrk.values[0] : wwTelemetry.args.speedbrakesValue;
-                wwTelemetry.args.verticalVelocity = motion.pitch;
+
+                // Increase speed brakes with cockpit shake (freq * amplitude)
+                wwTelemetry.args.speedbrakesValue += shake != null ? shake.values[0] * shake.values[1] : 0.0F;
+
+                wwTelemetry.args.verticalVelocity = accl != null ? accl.values[2] : wwTelemetry.args.verticalVelocity;
+                wwTelemetry.args.accelerationX = accl != null ? accl.values[0] : wwTelemetry.args.accelerationX;
+                wwTelemetry.args.accelerationY = accl != null ? accl.values[1] : wwTelemetry.args.accelerationY;
+                wwTelemetry.args.accelerationZ = accl != null ? accl.values[2] : wwTelemetry.args.accelerationZ;
                 if (!wwAPI.Send(WWAPI.WWMessage.UPDATE, wwTelemetry))
                 {
                     debugWindow?.AddText("Failed to send WW telemetry");
