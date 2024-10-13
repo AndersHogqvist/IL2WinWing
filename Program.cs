@@ -370,8 +370,8 @@ namespace IL2WinWing
                                     id = id,
                                     size = size
                                 };
-                                ev.data.nClientID = reader.ReadInt64();
-                                ev.data.nServerClientID = reader.ReadInt64();
+                                ev.data.nClientID = reader.ReadInt32();
+                                ev.data.nServerClientID = reader.ReadInt32();
                                 ev.data.sPlayerName = reader.ReadChars(32);
                                 telemetry.events.Add(ev);
                                 break;
@@ -383,7 +383,7 @@ namespace IL2WinWing
                                     id = id,
                                     size = size
                                 };
-                                ev.data.nParentClientID = reader.ReadInt64();
+                                ev.data.nParentClientID = reader.ReadInt32();
                                 ev.data.nCoalitionID = reader.ReadInt16();
                                 telemetry.events.Add(ev);
                                 break;

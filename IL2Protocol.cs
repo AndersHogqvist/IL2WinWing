@@ -127,8 +127,8 @@ namespace IL2WinWing
 
         public class STClientData
         {
-            public long nClientID { get; set; }
-            public long nServerClientID { get; set; }
+            public int nClientID { get; set; }
+            public int nServerClientID { get; set; }
             public char[] sPlayerName { get; set; } = new char[32];
 
             public override string ToString()
@@ -139,7 +139,7 @@ namespace IL2WinWing
 
         public class STControlledData
         {
-            public long nParentClientID { get; set; } = 0;
+            public int nParentClientID { get; set; } = 0;
             public short nCoalitionID { get; set; } = 0;
 
             public override string ToString()
