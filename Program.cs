@@ -23,10 +23,8 @@ namespace IL2WinWing
 
     public class CustomAppContext : ApplicationContext
     {
-        private UdpClient telemetryClient = new UdpClient(Properties.Settings.Default.IL2TelemetryPort);
-        private UdpClient motionClient = new UdpClient(Properties.Settings.Default.IL2MotionPort);
+        private UdpClient telemetryClient = new UdpClient();
         private IPEndPoint teleEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2TelemetryPort);
-        //private IPEndPoint motionEP = new IPEndPoint(IPAddress.Parse("127.0.0.1"), Properties.Settings.Default.IL2MotionPort);
 
         private IL2Protocol.Motion motion = new IL2Protocol.Motion();
         private int gunShells = 1000;
@@ -49,6 +47,10 @@ namespace IL2WinWing
             trayIcon.ContextMenuStrip.Items.Add("-");
             trayIcon.ContextMenuStrip.Items.Add("Exit", null, Exit);
             trayIcon.Visible = true;
+
+            telemetryClient.ExclusiveAddressUse = false;
+            telemetryClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            telemetryClient.Client.Bind(teleEP);
 
             new Task(IL2Listener).Start();
             wwAPI.WWMessageReceived += OnWWMessage;
@@ -103,21 +105,6 @@ namespace IL2WinWing
                         }
                     }
 
-                    //bytes = motionClient.Receive(ref motionEP);
-
-                    //if (bytes.Length > 0)
-                    //{
-                    //    if (!wwAPI.wwInit && !waitingForWWInit)
-                    //    {
-                    //        waitingForWWInit = true;
-                    //        wwAPI.Send(WWAPI.WWMessage.START);
-                    //    }
-                    //    else
-                    //    {
-                    //        ParseIL2Message(bytes);
-                    //    }
-                    //}
-
                     Thread.Sleep(25);
                 }
             }
@@ -129,7 +116,6 @@ namespace IL2WinWing
             {
                 run = false;
                 telemetryClient.Close();
-                motionClient.Close();
             }
         }
 
