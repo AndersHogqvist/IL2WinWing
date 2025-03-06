@@ -22,6 +22,22 @@ Installation and usage
 6. Start IL-2 GB
 7. Enjoy!
 
+If telemetry is already used
+============================
+If you have SimHaptic or some other application that is reading telemetry on port 4322 you need to add the following to `startup.cfg` in
+order for IL2WinWing to work:
+```
+[KEY = telemetrydevice]
+      addr = "127.0.0.1"
+      addr1 = "127.0.0.1:29373"
+      decimation = 2
+      enable = true
+      port = 4322
+[END]
+```
+You can choose whatever port number you want for IL2WinWing, in this case it's 29373. Just make sure that the port number in `startup.cfg`
+matches with the number in `IL2WinWing.dll.config`.
+
 Changing port number
 ====================
 If you for some reason need to change the port number, you can do so by editing the `IL2WinWing.dll.config` file in the same folder as the executable.
